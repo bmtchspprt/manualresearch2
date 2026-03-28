@@ -2,83 +2,90 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Condition C: AI-Mediated Documentation</title>
+    <title>Condition C: Adaptive Layer</title>
     <style>
-        body { font-family: sans-serif; background: #2c3e50; display: flex; justify-content: center; padding: 20px; }
-        #app { width: 100%; max-width: 800px; background: white; border-radius: 8px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
-        header { padding: 20px; background: #34495e; color: white; text-align: center; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; line-height: 1.4; }
-        .user { background: #3498db; color: white; align-self: flex-end; }
-        .ai { background: #ecf0f1; align-self: flex-start; border: 1px solid #bdc3c7; }
-        #feedback { padding: 15px; background: #f1c40f33; text-align: center; display: none; }
-        #input-area { padding: 20px; border-top: 1px solid #ddd; display: flex; }
-        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { margin-left: 10px; padding: 10px 20px; background: #2c3e50; color: white; border: none; cursor: pointer; }
+        body { font-family: 'Segoe UI', sans-serif; background: #eceff1; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        #app { width: 100%; max-width: 850px; background: white; border-radius: 12px; height: 92vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        header { padding: 20px; background: #263238; color: white; text-align: center; border-radius: 12px 12px 0 0; }
+        #chat { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
+        .msg { padding: 14px 20px; border-radius: 20px; max-width: 80%; font-size: 16px; line-height: 1.5; }
+        .user { background: #00796b; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ai { background: #f5f5f5; color: #263238; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #cfd8dc; }
+        .typing { font-size: 13px; color: #90a4ae; margin-left: 10px; display: none; }
+        #feedback { padding: 15px; background: #fffde7; text-align: center; display: none; border-top: 1px solid #fff9c4; }
+        .f-btn { padding: 10px 25px; border-radius: 6px; border: none; cursor: pointer; margin: 0 8px; font-weight: bold; transition: 0.2s; }
+        .clear { background: #43a047; color: white; }
+        .confused { background: #e53935; color: white; }
+        #input-area { padding: 25px; display: flex; border-top: 1px solid #eee; }
+        #query { flex: 1; padding: 15px; border: 1.5px solid #cfd8dc; border-radius: 8px; font-size: 16px; outline: none; }
+        #send { margin-left: 15px; padding: 0 30px; background: #263238; color: white; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="app">
-        <header><strong>TECHNICAL ASSISTANT</strong><br>Research Condition: Adaptive GPT</header>
+        <header><strong>TECHNICAL ASSISTANT</strong><br><small>Condition C: Adaptive GPT-Assisted Layer</small></header>
         <div id="chat"></div>
+        <div id="typing" class="typing">Assistant is interpreting your request...</div>
         <div id="feedback">
-            Was that helpful? 
-            <button onclick="sendFeedback('clear')">Clear</button>
-            <button onclick="sendFeedback('confused')">Confused</button>
+            <span>Was that explanation clear?</span>
+            <button class="f-btn clear" onclick="fback('clear')">Clear</button>
+            <button class="f-btn confused" onclick="fback('confused')">Confused</button>
         </div>
         <div id="input-area">
-            <input type="text" id="userIn" placeholder="Ask a question..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()">Send</button>
+            <input type="text" id="query" placeholder="Ask anything about the manual..." onkeypress="if(event.key==='Enter') transmit()">
+            <button id="send" onclick="transmit()">Send</button>
         </div>
     </div>
     <script>
-        const sID = "P_" + Date.now();
-        let hist = [];
+        const sID = "RES_" + Date.now();
+        let logs = [];
 
-        function addMsg(role, txt) {
-            const box = document.getElementById('chat');
+        function print(role, txt) {
+            const c = document.getElementById('chat');
             const d = document.createElement('div');
             d.className = `msg ${role}`;
             d.innerText = txt;
-            box.appendChild(d);
-            box.scrollTop = box.scrollHeight;
+            c.appendChild(d);
+            c.scrollTop = c.scrollHeight;
         }
 
-        async function send() {
-            const i = document.getElementById('userIn');
-            const val = i.value.trim();
+        async function transmit() {
+            const q = document.getElementById('query');
+            const val = q.value.trim();
             if(!val) return;
             
-            addMsg('user', val);
-            i.value = '';
+            print('user', val);
+            q.value = '';
+            document.getElementById('typing').style.display = 'block';
             document.getElementById('feedback').style.display = 'none';
 
             try {
-                const r = await fetch('/chat', {
+                const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: val, sessionId: sID, history: hist})
+                    body: JSON.stringify({message: val, sessionId: sID, history: logs})
                 });
-                const d = await r.json();
-                const reply = d.reply || "Connection reset. Please try again.";
-                addMsg('ai', reply);
-                hist.push({role: "user", content: val}, {role: "model", content: reply});
+                const data = await res.json();
+                document.getElementById('typing').style.display = 'none';
+                print('ai', data.reply);
+                logs.push({role: "user", content: val}, {role: "model", content: data.reply});
                 document.getElementById('feedback').style.display = 'block';
             } catch (e) {
-                addMsg('ai', "System timeout. Please wait a moment and try again.");
+                document.getElementById('typing').style.display = 'none';
+                print('ai', "System busy. Please try rephrasing your question.");
             }
         }
 
-        async function sendFeedback(f) {
+        function fback(v) {
             fetch('/feedback', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({sessionId: sID, feedback: f})
+                body: JSON.stringify({sessionId: sID, feedback: v})
             });
             document.getElementById('feedback').style.display = 'none';
         }
 
-        window.onload = () => addMsg('ai', "System ready. How can I help with the current task?");
+        window.onload = () => print('ai', "I am ready to help. You can ask me questions about any part of the manual, even in plain language.");
     </script>
 </body>
 </html>
