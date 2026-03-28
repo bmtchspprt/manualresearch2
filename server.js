@@ -14,28 +14,30 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 if (!fs.existsSync('logs')) fs.mkdirSync('logs');
 
-// Load your manual
+// 1. PROJECT-SPECIFIC PATH LOGIC
+// Based on your latest screenshot, Binventory.txt is in 'data2' folder
 const manualPath = path.join(__dirname, 'data2', 'Binventory.txt');
-const manualContent = fs.existsSync(manualPath) ? fs.readFileSync(manualPath, 'utf8') : "MANUAL DATA NOT FOUND.";
+let manualContent = "Error: Manual text file not found in data2/Binventory.txt";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+if (fs.existsSync(manualPath)) {
+    manualContent = fs.readFileSync(manualPath, 'utf8');
+    console.log("SUCCESS: Manual loaded.");
+} else {
+    console.log("ERROR: Binventory.txt not found at " + manualPath);
+}
+
+// 2. API KEY VALIDATION
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+    console.log("ERROR: GEMINI_API_KEY is missing from environment variables.");
+}
+
+const genAI = new GoogleGenerativeAI(apiKey || "dummy_key");
 const model = genAI.getGenerativeModel({ 
     model: "gemini-1.5-flash",
-    systemInstruction: `SYSTEM PROMPT: GPT Technical Communication Assistant
-    You are a technical communication assistant designed to help non-technical users follow instructions from the provided manual.
-    MANUAL CONTENT: "${manualContent}"
-    
-    STRICT RULES:
-    1. Only use information in the provided manual. No external knowledge.
-    2. Use plain language. Avoid/explain jargon.
-    3. Break instructions into small, clear, sequential steps (one action per step).
-    4. Provide ONLY information for the current question. Do not provide future steps.
-    5. Integrate safety info only when it applies to the current action.
-    6. If user is confused, rephrase simply instead of adding more detail.
-    7. Use directional descriptions (e.g., "left terminal").
-    8. Do not complete the task for the user—guide them.
-    9. Confirm understanding when appropriate.
-    10. Prioritize brevity and usability over completeness.`
+    systemInstruction: `SYSTEM PROMPT: You are a technical communication assistant. 
+    Use ONLY: "${manualContent}". 
+    Rules: 1. No outside info. 2. Short sentences. 3. Bullet points. 4. Minimize cognitive load. 5. If confused, simplify.`
 });
 
 app.get('/', (req, res) => {
@@ -44,6 +46,11 @@ app.get('/', (req, res) => {
 
 app.post('/chat', async (req, res) => {
     const { message, sessionId, history } = req.body;
+    
+    if (!apiKey || apiKey === "dummy_key") {
+        return res.status(500).json({ reply: "API Key missing. Check Railway Variables." });
+    }
+
     try {
         const chat = model.startChat({
             history: (history || []).map(h => ({
@@ -55,23 +62,21 @@ app.post('/chat', async (req, res) => {
         const result = await chat.sendMessage(message);
         const aiResponse = result.response.text();
         
-        // Detailed Logging for RQ1 Analysis
         const logPath = path.join(__dirname, 'logs', `session-${sessionId}.txt`);
-        const logEntry = `[${new Date().toISOString()}]\nQUERY: ${message}\nRESPONSE: ${aiResponse}\n---\n`;
-        fs.appendFileSync(logPath, logEntry);
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}]\nQ: ${message}\nA: ${aiResponse}\n---\n`);
         
         res.json({ reply: aiResponse });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ reply: "Connection error. Please try again." });
+        console.error("GEMINI API ERROR:", error);
+        res.status(500).json({ reply: "Connection error with AI service. Check logs." });
     }
 });
 
 app.post('/feedback', (req, res) => {
     const { sessionId, feedback } = req.body;
     const logPath = path.join(__dirname, 'logs', `session-${sessionId}.txt`);
-    fs.appendFileSync(logPath, `[PARTICIPANT FEEDBACK]: User marked previous response as ${feedback.toUpperCase()}\n`);
+    fs.appendFileSync(logPath, `[FEEDBACK]: ${feedback}\n`);
     res.sendStatus(200);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`Research server active on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Server active on port ${PORT}`));
