@@ -3,80 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Condition C: AI-Mediated Documentation</title>
+    <title>Technical Assistant | Research</title>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        #chat-container { width: 100%; max-width: 800px; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 90vh; }
-        header { padding: 25px; background: #2c3e50; color: white; text-align: center; border-radius: 8px 8px 0 0; }
-        #chat-box { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; background: #fafafa; }
-        .message { padding: 15px 20px; border-radius: 10px; max-width: 85%; font-size: 16px; line-height: 1.6; }
-        .user { background: #3498db; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
-        .ai { background: #ffffff; color: #333; align-self: flex-start; border-bottom-left-radius: 0; border: 1px solid #e0e0e0; }
-        #typing { padding: 0 30px 10px; font-size: 14px; color: #888; display: none; }
-        #feedback-area { padding: 20px; background: #fcf8e3; border-top: 1px solid #faebcc; text-align: center; display: none; }
-        button { padding: 10px 25px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; margin: 0 10px; }
+        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        #chat-container { width: 100%; max-width: 800px; background: white; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 90vh; }
+        header { padding: 20px; background: #2c3e50; color: white; text-align: center; border-radius: 8px 8px 0 0; }
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .message { padding: 12px 18px; border-radius: 10px; max-width: 80%; line-height: 1.5; }
+        .user { background: #3498db; color: white; align-self: flex-end; }
+        .ai { background: #ecf0f1; color: #2c3e50; align-self: flex-start; border: 1px solid #dcdde1; }
+        #feedback-area { padding: 15px; background: #f9f9f9; border-top: 1px solid #eee; text-align: center; display: none; }
+        button { padding: 8px 20px; border-radius: 4px; border: none; cursor: pointer; margin: 0 5px; }
         .btn-clear { background: #27ae60; color: white; }
-        .btn-confused { background: #c0392b; color: white; }
-        #input-area { padding: 25px; border-top: 1px solid #eee; display: flex; }
-        #user-input { flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; outline: none; }
-        #send-btn { margin-left: 15px; padding: 0 30px; background: #2c3e50; color: white; border-radius: 5px; }
+        .btn-confused { background: #e74c3c; color: white; }
+        #input-area { padding: 20px; border-top: 1px solid #eee; display: flex; }
+        #user-input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
+        #send-btn { margin-left: 10px; padding: 10px 20px; background: #2c3e50; color: white; border-radius: 4px; }
     </style>
 </head>
 <body>
     <div id="chat-container">
         <header>
-            <div style="font-size: 1.4em; letter-spacing: 1px;">TECHNICAL ASSISTANT</div>
-            <div style="font-size: 0.9em; margin-top: 5px; color: #bdc3c7;">Adaptive GPT-Assisted Condition</div>
+            <strong>Technical Assistant</strong><br>
+            <small>Research Condition: Adaptive GPT</small>
         </header>
-        
         <div id="chat-box"></div>
-        <div id="typing">Assistant is generating response...</div>
-
         <div id="feedback-area">
-            <span style="margin-right: 15px;">Was that explanation clear?</span>
+            <span>Was that clear?</span>
             <button class="btn-clear" onclick="sendFeedback('clear')">Clear</button>
             <button class="btn-confused" onclick="sendFeedback('confused')">Confused</button>
         </div>
-
         <div id="input-area">
-            <input type="text" id="user-input" placeholder="Enter your question here..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <input type="text" id="user-input" placeholder="Type your question..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="send-btn" onclick="sendMessage()">Send</button>
         </div>
     </div>
 
     <script>
-        const sessionId = "PARTICIPANT_" + Date.now();
+        const sessionId = "SESS_" + Date.now();
         let history = [];
-        let lastAiMessage = "";
-
-        async function sendMessage() {
-            const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            if (!text) return;
-
-            appendMessage('user', text);
-            input.value = '';
-            document.getElementById('typing').style.display = 'block';
-            document.getElementById('feedback-area').style.display = 'none';
-
-            const response = await fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, sessionId, history })
-            });
-
-            const data = await response.json();
-            document.getElementById('typing').style.display = 'none';
-            
-            const reply = data.reply || "Error retrieving response.";
-            appendMessage('ai', reply);
-            lastAiMessage = reply;
-            
-            history.push({ role: "user", content: text });
-            history.push({ role: "assistant", content: reply });
-            
-            document.getElementById('feedback-area').style.display = 'block';
-        }
 
         function appendMessage(role, text) {
             const box = document.getElementById('chat-box');
@@ -87,8 +52,35 @@
             box.scrollTop = box.scrollHeight;
         }
 
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            appendMessage('user', text);
+            input.value = '';
+            document.getElementById('feedback-area').style.display = 'none';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, sessionId, history })
+                });
+
+                const data = await response.json();
+                appendMessage('ai', data.reply);
+                
+                history.push({ role: "user", content: text });
+                history.push({ role: "assistant", content: data.reply });
+                document.getElementById('feedback-area').style.display = 'block';
+            } catch (err) {
+                appendMessage('ai', "Fatal Error: Could not connect to the research server.");
+            }
+        }
+
         async function sendFeedback(type) {
-            await fetch('/feedback', {
+            fetch('/feedback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId, feedback: type })
@@ -96,9 +88,7 @@
             document.getElementById('feedback-area').style.display = 'none';
         }
 
-        window.onload = () => {
-            appendMessage('ai', "System Initialized. I am ready to help you with the technical manual. How can I assist you with the first task?");
-        };
+        window.onload = () => appendMessage('ai', "Hello. I am ready to assist with the manual. How can I help?");
     </script>
 </body>
 </html>
