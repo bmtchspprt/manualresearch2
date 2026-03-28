@@ -6,7 +6,9 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+// FORCE PORT 8080: This matches your Railway logs exactly
+const PORT = process.env.PORT || 8080;
 
 app.use(cors());
 app.use(express.json());
@@ -14,30 +16,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 if (!fs.existsSync('logs')) fs.mkdirSync('logs');
 
-// 1. PROJECT-SPECIFIC PATH LOGIC
-// Based on your latest screenshot, Binventory.txt is in 'data2' folder
 const manualPath = path.join(__dirname, 'data2', 'Binventory.txt');
-let manualContent = "Error: Manual text file not found in data2/Binventory.txt";
+let manualContent = "Manual content missing.";
 
 if (fs.existsSync(manualPath)) {
     manualContent = fs.readFileSync(manualPath, 'utf8');
     console.log("SUCCESS: Manual loaded.");
-} else {
-    console.log("ERROR: Binventory.txt not found at " + manualPath);
 }
 
-// 2. API KEY VALIDATION
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-    console.log("ERROR: GEMINI_API_KEY is missing from environment variables.");
-}
-
-const genAI = new GoogleGenerativeAI(apiKey || "dummy_key");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ 
     model: "gemini-1.5-flash",
-    systemInstruction: `SYSTEM PROMPT: You are a technical communication assistant. 
-    Use ONLY: "${manualContent}". 
-    Rules: 1. No outside info. 2. Short sentences. 3. Bullet points. 4. Minimize cognitive load. 5. If confused, simplify.`
+    systemInstruction: `SYSTEM PROMPT: You are a technical communication assistant. Use ONLY: "${manualContent}". Rules: 1. No outside info. 2. Short sentences. 3. Bullet points. 4. Minimize cognitive load. 5. If confused, simplify.`
 });
 
 app.get('/', (req, res) => {
@@ -46,11 +36,6 @@ app.get('/', (req, res) => {
 
 app.post('/chat', async (req, res) => {
     const { message, sessionId, history } = req.body;
-    
-    if (!apiKey || apiKey === "dummy_key") {
-        return res.status(500).json({ reply: "API Key missing. Check Railway Variables." });
-    }
-
     try {
         const chat = model.startChat({
             history: (history || []).map(h => ({
@@ -63,20 +48,14 @@ app.post('/chat', async (req, res) => {
         const aiResponse = result.response.text();
         
         const logPath = path.join(__dirname, 'logs', `session-${sessionId}.txt`);
-        fs.appendFileSync(logPath, `[${new Date().toISOString()}]\nQ: ${message}\nA: ${aiResponse}\n---\n`);
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] Q: ${message} | A: ${aiResponse}\n`);
         
         res.json({ reply: aiResponse });
     } catch (error) {
-        console.error("GEMINI API ERROR:", error);
-        res.status(500).json({ reply: "Connection error with AI service. Check logs." });
+        console.error("Gemini Error:", error);
+        res.status(500).json({ reply: "The AI is momentarily unavailable. Please try your question again." });
     }
 });
 
-app.post('/feedback', (req, res) => {
-    const { sessionId, feedback } = req.body;
-    const logPath = path.join(__dirname, 'logs', `session-${sessionId}.txt`);
-    fs.appendFileSync(logPath, `[FEEDBACK]: ${feedback}\n`);
-    res.sendStatus(200);
-});
-
+// Use 0.0.0.0 to ensure the public internet can reach the Railway container
 app.listen(PORT, '0.0.0.0', () => console.log(`Server active on port ${PORT}`));
