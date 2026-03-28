@@ -12,32 +12,36 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Ensure logs folder exists for your data collection
 if (!fs.existsSync('logs')) fs.mkdirSync('logs');
 
-// Path to your manual in the data2 folder
+// Load your manual
 const manualPath = path.join(__dirname, 'data2', 'Binventory.txt');
-const manualContent = fs.existsSync(manualPath) ? fs.readFileSync(manualPath, 'utf8') : "Manual content not found.";
+const manualContent = fs.existsSync(manualPath) ? fs.readFileSync(manualPath, 'utf8') : "MANUAL DATA NOT FOUND.";
 
-// Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ 
     model: "gemini-1.5-flash",
-    systemInstruction: `You are a technical assistant. Use ONLY this text: "${manualContent}". 
-    Rules: 
-    1. Do not use outside knowledge. 
-    2. Use short, clear sentences to minimize cognitive load. 
-    3. Use bullet points for steps. 
-    4. If the user is confused, simplify the explanation further. 
-    5. Do not complete the task for the user; guide them.`
+    systemInstruction: `SYSTEM PROMPT: GPT Technical Communication Assistant
+    You are a technical communication assistant designed to help non-technical users follow instructions from the provided manual.
+    MANUAL CONTENT: "${manualContent}"
+    
+    STRICT RULES:
+    1. Only use information in the provided manual. No external knowledge.
+    2. Use plain language. Avoid/explain jargon.
+    3. Break instructions into small, clear, sequential steps (one action per step).
+    4. Provide ONLY information for the current question. Do not provide future steps.
+    5. Integrate safety info only when it applies to the current action.
+    6. If user is confused, rephrase simply instead of adding more detail.
+    7. Use directional descriptions (e.g., "left terminal").
+    8. Do not complete the task for the user—guide them.
+    9. Confirm understanding when appropriate.
+    10. Prioritize brevity and usability over completeness.`
 });
 
-// Serve the main interface
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Chat Logic
 app.post('/chat', async (req, res) => {
     const { message, sessionId, history } = req.body;
     try {
@@ -49,28 +53,25 @@ app.post('/chat', async (req, res) => {
         });
 
         const result = await chat.sendMessage(message);
-        const response = await result.response;
-        const aiResponse = response.text();
+        const aiResponse = result.response.text();
         
-        // Log interaction for research analysis
+        // Detailed Logging for RQ1 Analysis
         const logPath = path.join(__dirname, 'logs', `session-${sessionId}.txt`);
-        const logEntry = `[${new Date().toISOString()}]\nUSER: ${message}\nAI: ${aiResponse}\n---\n`;
+        const logEntry = `[${new Date().toISOString()}]\nQUERY: ${message}\nRESPONSE: ${aiResponse}\n---\n`;
         fs.appendFileSync(logPath, logEntry);
         
-        // Send back 'reply' key for frontend
         res.json({ reply: aiResponse });
     } catch (error) {
-        console.error("Gemini Error:", error);
-        res.status(500).json({ reply: "I'm sorry, I'm having trouble connecting to my brain right now." });
+        console.error(error);
+        res.status(500).json({ reply: "Connection error. Please try again." });
     }
 });
 
-// Feedback Logic
 app.post('/feedback', (req, res) => {
-    const { sessionId, feedback, lastMessage } = req.body;
+    const { sessionId, feedback } = req.body;
     const logPath = path.join(__dirname, 'logs', `session-${sessionId}.txt`);
-    fs.appendFileSync(logPath, `[FEEDBACK]: Participant marked last response as: ${feedback.toUpperCase()}\n`);
+    fs.appendFileSync(logPath, `[PARTICIPANT FEEDBACK]: User marked previous response as ${feedback.toUpperCase()}\n`);
     res.sendStatus(200);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Research server active on port ${PORT}`));
