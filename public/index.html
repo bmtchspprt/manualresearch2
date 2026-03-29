@@ -11,11 +11,8 @@
         .msg { padding: 14px 20px; border-radius: 20px; max-width: 80%; font-size: 16px; line-height: 1.5; }
         .user { background: #00796b; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .ai { background: #f5f5f5; color: #263238; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #cfd8dc; }
-        .typing { font-size: 13px; color: #90a4ae; margin-left: 10px; display: none; padding: 10px; }
+        .typing { font-size: 13px; color: #90a4ae; margin-left: 25px; display: none; padding-bottom: 10px; }
         #feedback { padding: 15px; background: #fffde7; text-align: center; display: none; border-top: 1px solid #fff9c4; }
-        .f-btn { padding: 10px 25px; border-radius: 6px; border: none; cursor: pointer; margin: 0 8px; font-weight: bold; transition: 0.2s; }
-        .clear { background: #43a047; color: white; }
-        .confused { background: #e53935; color: white; }
         #input-area { padding: 25px; display: flex; border-top: 1px solid #eee; }
         #query { flex: 1; padding: 15px; border: 1.5px solid #cfd8dc; border-radius: 8px; font-size: 16px; outline: none; }
         #send { margin-left: 15px; padding: 0 30px; background: #263238; color: white; border-radius: 8px; cursor: pointer; border: none; }
@@ -26,11 +23,6 @@
         <header><strong>TECHNICAL ASSISTANT</strong><br><small>Condition C: Adaptive GPT-Assisted Layer</small></header>
         <div id="chat"></div>
         <div id="typing" class="typing">Assistant is thinking...</div>
-        <div id="feedback">
-            <span>Was that explanation clear?</span>
-            <button class="f-btn clear" onclick="fback('clear')">Clear</button>
-            <button class="f-btn confused" onclick="fback('confused')">Confused</button>
-        </div>
         <div id="input-area">
             <input type="text" id="query" placeholder="Ask anything about the manual..." onkeypress="if(event.key==='Enter') transmit()">
             <button id="send" onclick="transmit()">Send</button>
@@ -57,9 +49,9 @@
             print('user', val);
             q.value = '';
             document.getElementById('typing').style.display = 'block';
-            document.getElementById('feedback').style.display = 'none';
 
             try {
+                // Ensure this path matches the server route exactly
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -70,26 +62,19 @@
 
                 const data = await res.json();
                 document.getElementById('typing').style.display = 'none';
-                print('ai', data.reply);
-                logs.push({role: "user", content: val}, {role: "model", content: data.reply});
-                document.getElementById('feedback').style.display = 'block';
+                
+                if (data.reply) {
+                    print('ai', data.reply);
+                    logs.push({role: "user", content: val}, {role: "assistant", content: data.reply});
+                }
             } catch (e) {
                 document.getElementById('typing').style.display = 'none';
                 print('ai', "System busy. Please ensure you are using the live Railway URL.");
-                console.error("Connection Error:", e);
+                console.error("Connection Failed:", e);
             }
         }
 
-        function fback(v) {
-            fetch('/feedback', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({sessionId: sID, feedback: v})
-            });
-            document.getElementById('feedback').style.display = 'none';
-        }
-
-        window.onload = () => print('ai', "I am ready to help. You can ask me questions about any part of the manual, even in plain language.");
+        window.onload = () => print('ai', "I am ready. You can ask me questions about any part of the manual.");
     </script>
 </body>
 </html>
