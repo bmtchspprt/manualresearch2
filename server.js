@@ -8,25 +8,28 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Essential for Railway/Browser communication
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Manual Loading
 const manualPath = path.join(__dirname, 'data2', 'Binventory.txt');
 let manualContent = "Manual content missing.";
 if (fs.existsSync(manualPath)) {
     manualContent = fs.readFileSync(manualPath, 'utf8');
+    console.log("SUCCESS: Manual loaded into memory.");
 }
 
-// Uses the variable you set in Railway
-const groq = new Groq({ apiKey: process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY });
+// Initialize Groq - replace GEMINI_API_KEY in Railway with your Groq key
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY });
 
 app.post('/chat', async (req, res) => {
     const { message, history } = req.body;
     try {
         const completion = await groq.chat.completions.create({
             messages: [
-                { role: "system", content: `Technical Assistant. Use ONLY: ${manualContent}. Be forgiving of typos. Be concise.` },
+                { role: "system", content: `Technical Assistant. Use ONLY: ${manualContent}. Be forgiving of typos.` },
                 ...(history || []).map(h => ({ 
                     role: h.role === 'user' ? 'user' : 'assistant', 
                     content: h.content 
@@ -36,9 +39,10 @@ app.post('/chat', async (req, res) => {
             model: "llama3-8b-8192", 
         });
 
-        res.json({ reply: completion.choices[0].message.content });
+        const reply = completion.choices[0]?.message?.content || "I couldn't find an answer.";
+        res.json({ reply: reply });
     } catch (error) {
-        console.error("GROQ ERROR:", error.message);
+        console.error("DETAILED SERVER ERROR:", error.message);
         res.status(500).json({ reply: "Connection error. Check Railway logs." });
     }
 });
