@@ -17,12 +17,12 @@ const manualPath = path.join(__dirname, 'data2', 'Binventory.txt');
 let manualContent = "Manual content missing.";
 if (fs.existsSync(manualPath)) {
     manualContent = fs.readFileSync(manualPath, 'utf8');
-    console.log("SUCCESS: Manual loaded.");
 }
 
-// Initialize Groq - replace GEMINI_API_KEY in Railway with your Groq key
+// Initialize Groq
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY });
 
+// The main chat endpoint
 app.post('/chat', async (req, res) => {
     const { message, history } = req.body;
     try {
