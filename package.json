@@ -7,7 +7,23 @@
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "dependencies": {a{
+  "name": "tech-comm-research-tool",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
+    "groq-sdk": "^0.3.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
     "@google/generative-ai": "^0.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
