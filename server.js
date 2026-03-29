@@ -3,25 +3,25 @@ const express = require('express');
 const Groq = require('groq-sdk');
 const fs = require('fs');
 const path = require('path');
-const cors = require('cors');
+const cors = require('cors'); // Make sure you have 'cors' in your package.json
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Essential for Railway/Browser communication
+// 1. Allow all origins for the research tool
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Manual Loading
+// 2. Manual Loading
 const manualPath = path.join(__dirname, 'data2', 'Binventory.txt');
 let manualContent = "Manual content missing.";
 if (fs.existsSync(manualPath)) {
     manualContent = fs.readFileSync(manualPath, 'utf8');
-    console.log("SUCCESS: Manual loaded into memory.");
+    console.log("SUCCESS: Manual loaded.");
 }
 
-// Initialize Groq - replace GEMINI_API_KEY in Railway with your Groq key
+// 3. Initialize Groq
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY });
 
 app.post('/chat', async (req, res) => {
@@ -39,11 +39,10 @@ app.post('/chat', async (req, res) => {
             model: "llama3-8b-8192", 
         });
 
-        const reply = completion.choices[0]?.message?.content || "I couldn't find an answer.";
-        res.json({ reply: reply });
+        res.json({ reply: completion.choices[0].message.content });
     } catch (error) {
-        console.error("DETAILED SERVER ERROR:", error.message);
-        res.status(500).json({ reply: "Connection error. Check Railway logs." });
+        console.error("SERVER ERROR:", error.message);
+        res.status(500).json({ reply: "The server encountered an error. Check Railway logs." });
     }
 });
 
